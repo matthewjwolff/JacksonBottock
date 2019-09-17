@@ -1,12 +1,21 @@
 package io.wolff.discordbot;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
 
@@ -14,6 +23,7 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 // TODO: note this implementation does not support multiple servers
 public class Bot {
 	
+	public static final Path COMMANDS_PATH = Paths.get("commands.json");
 	public static final Bot INST = new Bot();
 	
 	private Bot() {
@@ -52,6 +62,12 @@ public class Bot {
 					message.setContent("That command doesn't exist.");
 				}).block();
 			}
+			return;
+		}
+		if(args[0].equals("/list")) {
+			event.getMessage().getChannel().block().createMessage(message -> {
+				message.setContent("I know how to: "+commands.keySet().stream().reduce("", (s1, s2) -> s1+" "+s2));
+			}).block();
 			return;
 		}
 		// now in user-entered command territory, surround in try-catch
@@ -97,12 +113,17 @@ public class Bot {
 		return m!=null;
 		
 	}
+	
+	public static final List<String> PREDEF_COMMANDS = Arrays.asList("set", "unset", "list");
 
 	private boolean setCommand(String[] args) {
 		if(args.length < 3) {
 			return false;
 		}
 		String name = args[1];
+		if(PREDEF_COMMANDS.contains(name)) {
+			return false;
+		}
 		String url;
 		String content;
 		try {
@@ -122,11 +143,21 @@ public class Bot {
 	}
 	
 	private void save() {
-		// TODO: implement saving user messages
+		try {
+			Files.write(COMMANDS_PATH, new Gson().toJson(this.commands).getBytes());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private void load() {
-		// TODO: implement loading user messages
+		if(Files.exists(COMMANDS_PATH)) {
+			try {
+				this.commands = new Gson().fromJson(new String(Files.readAllBytes(COMMANDS_PATH)), new TypeToken<Map<String, Message>>() {}.getType());
+			} catch (JsonSyntaxException | IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 }
