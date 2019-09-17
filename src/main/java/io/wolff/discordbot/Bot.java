@@ -18,8 +18,9 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.util.Permission;
 
-//TODO: serialization
 // TODO: note this implementation does not support multiple servers
 public class Bot {
 	
@@ -39,7 +40,12 @@ public class Bot {
 		}
 		String[] args = content.split(" ");
 		if(args[0].equals("/set")) {
-			// TODO: check admin privileges
+			if(!memberHasPermissions(event.getMember().orElse(null))) {
+				event.getMessage().getChannel().block().createMessage(message -> {
+					message.setContent("You do not have permission to use this command.");
+				}).block();
+				return;
+			}
 			if(setCommand(args)) {
 				event.getMessage().getChannel().block().createMessage(message -> {
 					message.setContent("Created new command "+args[1]);
@@ -52,7 +58,12 @@ public class Bot {
 			return;
 		}
 		if(args[0].equals("/unset")) {
-			// TODO: check admin privileges
+			if(!memberHasPermissions(event.getMember().orElse(null))) {
+				event.getMessage().getChannel().block().createMessage(message -> {
+					message.setContent("You do not have permission to use this command.");
+				}).block();
+				return;
+			}
 			if(removeCommand(args)) {
 				event.getMessage().getChannel().block().createMessage(message -> {
 					message.setContent("That command was removed.");
@@ -75,9 +86,7 @@ public class Bot {
 			String command = args[0];
 			Message m = commands.get(command);
 			if(m==null) {
-				event.getMessage().getChannel().block().createMessage(message -> {
-					message.setContent("I don't know how to respond to that command.");
-				}).block();
+				// someone else might know how to do this command, so do nothing
 				return;
 			}
 			event.getMessage().getChannel().block().createMessage(message -> {
@@ -101,6 +110,15 @@ public class Bot {
 				});
 			}).block();
 		}
+	}
+
+	public static final String PERM_NAME = "JacksonBottock_set";
+	private boolean memberHasPermissions(Member member) {
+		if(member==null) {
+			return false;
+		}
+		return member.getBasePermissions().map(permSet -> permSet.asEnumSet().contains(Permission.ADMINISTRATOR)).block() ||
+				member.getRoles().any(role -> PERM_NAME.equals(role.getName())).block();
 	}
 
 	private boolean removeCommand(String[] args) {
