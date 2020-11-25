@@ -15,7 +15,10 @@ package io.wolff.discordbot;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
+import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.gateway.intent.Intent;
+import discord4j.gateway.intent.IntentSet;
 
 public class Main {
 	
@@ -23,10 +26,11 @@ public class Main {
 		if(args.length!=1) {
 			throw new IllegalArgumentException("Invalid usage. Please provide token only.");
 		}
-		DiscordClient client = new DiscordClientBuilder(args[0]).build();
-		client.getEventDispatcher().on(MessageCreateEvent.class).subscribe(Bot.INST::handleMessageCreateEvent);
-		
-		client.login().block();
+		DiscordClient client = DiscordClientBuilder.create(args[0]).build();
+		client.gateway().setEnabledIntents(IntentSet.of(Intent.GUILD_MESSAGES, Intent.GUILD_MEMBERS));
+		GatewayDiscordClient gateway = client.login().block();
+		gateway.on(MessageCreateEvent.class).subscribe(Bot.INST::handleMessageCreateEvent);
+		gateway.onDisconnect().block();
 	}
 
 }

@@ -19,7 +19,7 @@ import com.google.gson.reflect.TypeToken;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Member;
-import discord4j.core.object.util.Permission;
+import discord4j.rest.util.Permission;
 
 // TODO: note this implementation does not support multiple servers
 public class Bot {
@@ -34,7 +34,7 @@ public class Bot {
 	private Map<String, Message> commands = new HashMap<>();
 	
 	public void handleMessageCreateEvent(MessageCreateEvent event) {
-		String content = event.getMessage().getContent().orElse(null);
+		String content = event.getMessage().getContent();
 		if(content==null || !content.startsWith("/")) {
 			return; // not a command
 		}
@@ -78,6 +78,31 @@ public class Bot {
 		if(args[0].equals("/list")) {
 			event.getMessage().getChannel().block().createMessage(message -> {
 				message.setContent("I know how to: "+commands.keySet().stream().reduce("", (s1, s2) -> s1+" "+s2));
+			}).block();
+			return;
+		}
+		if(args[0].equals("/user")) {
+			if(args.length==0) {
+				event.getMessage().getChannel().block().createMessage(message -> {
+					message.setContent("Usage: /user [username]");
+				}).block();
+				return;
+			}
+			String username = content.substring("/user ".length());
+			// discord 'ids' do not correlate to usernames. must search through guild's members
+			Member match = event.getGuild().block().requestMembers()
+					.filter(p -> username.equals(p.getNickname().orElse(p.getUsername()))).blockFirst();
+			if(match==null) {
+				event.getMessage().getChannel().block().createMessage(message -> {
+					message.setContent("Could not find user "+username);
+				}).block();
+				return;
+			}
+			event.getMessage().getChannel().block().createMessage(m -> {
+				m.setEmbed(e -> {
+					e.setImage(match.getAvatarUrl());
+					e.setTitle(username);
+				});
 			}).block();
 			return;
 		}
