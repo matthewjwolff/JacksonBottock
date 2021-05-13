@@ -20,16 +20,30 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.gateway.intent.Intent;
 import discord4j.gateway.intent.IntentSet;
 
-public class Main {
+public class JacksonBottock {
 	
 	public static void main(String[] args) {
-		if(args.length!=1) {
-			throw new IllegalArgumentException("Invalid usage. Please provide token only.");
+		String accessToken = System.getenv("JACKSON_ACCESS_TOKEN");
+		String commandPath = System.getenv("JACKSON_COMMAND_PATH");
+		
+		for(int i=0; i<args.length-1; i++) {
+			if("-t".equals(args[i])) {
+				i++;
+				accessToken = args[i];
+			} else if("-d".equals(args[i])) {
+				i++;
+				commandPath = args[i];
+			}
 		}
-		DiscordClient client = DiscordClientBuilder.create(args[0]).build();
+		
+		if(accessToken == null || commandPath==null) {
+			throw new IllegalArgumentException("Invalid usage. Execute with -t your_token_here -d config_path, or use environment variables JACKSON_ACCESS_TOKEN and JACKSON_COMMAND_PATH");
+		}
+		DiscordClient client = DiscordClientBuilder.create(accessToken).build();
 		client.gateway().setEnabledIntents(IntentSet.of(Intent.GUILD_MESSAGES, Intent.GUILD_MEMBERS));
 		GatewayDiscordClient gateway = client.login().block();
-		gateway.on(MessageCreateEvent.class).subscribe(Bot.INST::handleMessageCreateEvent);
+		Bot bot = new Bot(commandPath);
+		gateway.on(MessageCreateEvent.class).subscribe(bot::handleMessageCreateEvent);
 		gateway.onDisconnect().block();
 	}
 

@@ -24,10 +24,10 @@ import discord4j.rest.util.Permission;
 // TODO: note this implementation does not support multiple servers
 public class Bot {
 	
-	public static final Path COMMANDS_PATH = Paths.get("commands.json");
-	public static final Bot INST = new Bot();
+	public final Path commandsPath;
 	
-	private Bot() {
+	public Bot(String commandsPath) {
+		this.commandsPath = Paths.get(commandsPath);
 		load();
 	}
 	
@@ -187,16 +187,16 @@ public class Bot {
 	
 	private void save() {
 		try {
-			Files.write(COMMANDS_PATH, new Gson().toJson(this.commands).getBytes());
+			Files.write(commandsPath, new Gson().toJson(this.commands).getBytes());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
 	private void load() {
-		if(Files.exists(COMMANDS_PATH)) {
+		if(Files.exists(commandsPath)) {
 			try {
-				this.commands = new Gson().fromJson(new String(Files.readAllBytes(COMMANDS_PATH)), new TypeToken<Map<String, Message>>() {}.getType());
+				this.commands = new Gson().fromJson(new String(Files.readAllBytes(commandsPath)), new TypeToken<Map<String, Message>>() {}.getType());
 			} catch (JsonSyntaxException | IOException e) {
 				e.printStackTrace();
 			}
